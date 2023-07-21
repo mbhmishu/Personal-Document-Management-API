@@ -14,6 +14,8 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.filters import SearchFilter
+from .paginations import DocumenttSmallesetPagination
 
 
 
@@ -25,6 +27,22 @@ class DocumentListCreateView(generics.ListCreateAPIView):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DocumenttSmallesetPagination
+    filter_backends = [SearchFilter]
+    search_fields = ['title','description']
+
+    def get_queryset(self):
+        ######
+        queryset = super().get_queryset()
+        title = self.request.query_params.get('title', None)
+        description = self.request.query_params.get('description', None)
+        ####
+        search_query = self.request.query_params.get('search', None)
+
+        if search_query is not None:
+            queryset = queryset.filter(title__icontains=search_query) | queryset.filter(description__icontains=search_query)
+
+        return queryset
 
     def perform_create(self, serializer):
         file = self.request.data.get('file')
